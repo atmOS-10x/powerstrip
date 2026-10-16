@@ -1,0 +1,88 @@
+name: Image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/electric-multidb
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build
+        working-directory: packages/sync-service
+        run: |
+          docker buildx build --load --build-context electric-telemetry=../electric-telemetry \
+            --build-arg ELECTRIC_VERSION=$(jq -r .version package.json) -t electric-multidb:dev .
+      - name: End-to-end test
+        run: packages/sync-service/scripts/multi_database_test.sh electric-multidb:dev
+
+  build:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - { platform: linux/amd64, runner: ubuntu-24.04 }
+          - { platform: linux/arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Version
+        id: version
+        run: echo "electric=$(jq -r .version packages/sync-service/package.json)" >> "$GITHUB_OUTPUT"
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: packages/sync-service
+          build-contexts: electric-telemetry=packages/electric-telemetry
+          build-args: ELECTRIC_VERSION=${{ steps.version.outputs.electric }}
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Electric with a multi-database mode for git worktrees
+            org.opencontainers.image.licenses=Apache-2.0
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+        env: { DIGEST: "${{ steps.build.outputs.digest }}" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  merge:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: /tmp/digests, pattern: digest-*, merge-multiple: true }
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Tag
+        working-directory: /tmp/digests
+        run: |
+          electric=$(jq -r .version "$GITHUB_WORKSPACE/packages/sync-service/package.json")
+          tags="-t $IMAGE:latest -t $IMAGE:$electric"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then tags="$tags -t $IMAGE:${GITHUB_REF#refs/tags/v}"; fi
+          docker buildx imagetools create $tags $(printf "$IMAGE@sha256:%s " *)
+          docker buildx imagetools inspect "$IMAGE:latest"

@@ -1,3 +1,82 @@
+# electric-multidb
+
+**[Electric](https://github.com/electric-sql/electric) that syncs every database on your Postgres server from one instance.** Built for git worktrees: give each worktree, branch or preview its own database, and point it at one shared Electric. No Electric container per worktree, no replication slot left behind by a worktree you stopped.
+
+It's stock Electric 1.7.9 plus one opt-in mode. With `ELECTRIC_MULTI_DATABASE` unset, it behaves exactly like upstream.
+
+```sh
+docker run -p 3000:3000 \
+  -e DATABASE_URL=postgresql://electric:secret@postgres:5432/app \
+  -e ELECTRIC_SECRET=... \
+  -e ELECTRIC_MULTI_DATABASE=true \
+  ghcr.io/atmos-10x/electric-multidb:latest
+```
+
+```
+GET /v1/shape?table=items               → database "app" (DATABASE_URL), as always
+GET /db/app_feature_x/v1/shape?table=…  → database "app_feature_x" on the same server
+GET /db/app_pr_123/v1/shape?table=…     → database "app_pr_123"
+```
+
+A worktree only changes its Electric URL, for example `http://localhost:3000/db/app_feature_x`. Every Electric client and proxy that appends `/v1/shape` to a base URL works unchanged.
+
+## How it works
+
+- **Lazy start.** The first request for `/db/<name>` starts a stack for that database inside the same process. It uses the credentials, host and options of `DATABASE_URL` (and `ELECTRIC_POOLED_DATABASE_URL`) with only the database name swapped, and holds that first request until the stack is replicating.
+- **Temporary slots.** Each stack replicates through a temporary slot with a random name. When a stack stops, Postgres drops its slot, so a forgotten worktree never pins WAL.
+- **Idle stop.** A database with no requests for `ELECTRIC_MULTI_DATABASE_IDLE_TIMEOUT` stops. The next request starts it again with fresh shape logs, and clients holding older shapes get Electric's usual `409 must-refetch`.
+- **Isolation.** Each database gets its own stack (replication client, shape cache, storage directory, connection pool), so shapes never mix across databases. The same `ELECTRIC_SECRET` guards every database.
+- **Cheap.** Extra databases share the runtime. In our measurements three databases used 330–350 MB in one process; three stock Electric containers use about 300 MB each.
+
+## Configuration
+
+| Variable | Default | |
+|---|---|---|
+| `ELECTRIC_MULTI_DATABASE` | `false` | Turns the mode on. |
+| `ELECTRIC_MULTI_DATABASE_PATTERN` | any name | Regular expression the whole database name must match, e.g. `app_.*`. Anything else answers 404. |
+| `ELECTRIC_MULTI_DATABASE_IDLE_TIMEOUT` | `30m` | Stop a database's stack after this long without requests (`ms`, `s` or `m`). |
+| `ELECTRIC_MULTI_DATABASE_POOL_SIZE` | `5` | Query pool per extra database, so many databases fit in `max_connections`. |
+
+Every upstream variable keeps its meaning and applies to the default database.
+
+`DELETE /db/<name>?secret=…` stops a database's stack and drops its slot right away. Call it before `DROP DATABASE`: Postgres refuses to drop a database with an active replication slot.
+
+Each database needs what Electric always needs: a role with `REPLICATION` that may connect to it, and, with `ELECTRIC_MANUAL_TABLE_PUBLISHING`, the publication (`electric_publication_default`) in that database.
+
+## Example: one stack for all worktrees
+
+```yaml
+# compose.yaml, started once per machine
+services:
+  postgres:
+    image: postgres:17-alpine
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=40",
+              "-c", "max_wal_senders=40", "-c", "max_connections=400"]
+  electric:
+    image: ghcr.io/atmos-10x/electric-multidb:latest
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/app?sslmode=disable
+      ELECTRIC_MULTI_DATABASE: "true"
+      ELECTRIC_MULTI_DATABASE_PATTERN: app_.*
+    ports: ["127.0.0.1:3000:3000"]
+```
+
+```sh
+# in a new worktree
+createdb app_$(basename "$PWD")
+export ELECTRIC_URL=http://localhost:3000/db/app_$(basename "$PWD")
+```
+
+## Scope
+
+It's meant for development and previews, not production multi-tenancy. In production, run upstream Electric or [Electric Cloud](https://electric-sql.com/product/cloud). The change is small and self-contained: [`multi_database.ex`](packages/sync-service/lib/electric/multi_database.ex), [`multi_database_router.ex`](packages/sync-service/lib/electric/plug/multi_database_router.ex) and a few lines of wiring. [`scripts/multi_database_test.sh`](packages/sync-service/scripts/multi_database_test.sh) checks it end to end against a real Postgres.
+
+## License and credit
+
+Electric is by [ElectricSQL](https://electric-sql.com) and licensed under [Apache 2.0](packages/sync-service/LICENSE), and so is this fork. Files changed from upstream say so in their first line. Upstream's README follows below.
+
+---
+
 <p align="center">
   <a href="https://electric-sql.com" target="_blank">
     <picture>
