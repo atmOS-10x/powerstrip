@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="brand/banner-dark.png">
-    <img src="brand/banner.png" alt="powerstrip: Electric for every git worktree" width="800">
-  </picture>
+  <img src="brand/logo.svg" alt="Powerstrip linked sockets logo" width="96" height="96">
 </p>
 
 # powerstrip
