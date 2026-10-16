@@ -1,4 +1,9 @@
-<p align="center"><img src="brand/banner.png" alt="powerstrip: Electric for every git worktree" width="800"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/banner-dark.png">
+    <img src="brand/banner.png" alt="powerstrip: Electric for every git worktree" width="800">
+  </picture>
+</p>
 
 # powerstrip
 
