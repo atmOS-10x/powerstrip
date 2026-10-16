@@ -1,4 +1,4 @@
-# Modified in electric-multidb (github.com/atmOS-10x/electric-multidb): multi-database mode.
+# Modified in powerstrip (github.com/atmOS-10x/powerstrip): multi-database mode.
 defmodule Electric.Plug.Router do
   use Plug.Router, copy_opts_to_assign: :config
   use Electric.Telemetry

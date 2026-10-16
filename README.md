@@ -1,6 +1,8 @@
-# electric-multidb
+<p align="center"><img src="brand/banner.png" alt="powerstrip: Electric for every git worktree" width="800"></p>
 
-**[Electric](https://github.com/electric-sql/electric) that syncs every database on your Postgres server from one instance.** Built for git worktrees: give each worktree, branch or preview its own database, and point it at one shared Electric. No Electric container per worktree, no replication slot left behind by a worktree you stopped.
+# powerstrip
+
+**One [Electric](https://github.com/electric-sql/electric) for every git worktree: one instance syncs every database on your Postgres server.** Give each worktree, branch or preview its own database and plug them all into one shared instance: no Electric container per worktree, and no replication slot left behind by a worktree you stopped.
 
 It's stock Electric 1.7.9 plus one opt-in mode. With `ELECTRIC_MULTI_DATABASE` unset, it behaves exactly like upstream.
 
@@ -9,7 +11,7 @@ docker run -p 3000:3000 \
   -e DATABASE_URL=postgresql://electric:secret@postgres:5432/app \
   -e ELECTRIC_SECRET=... \
   -e ELECTRIC_MULTI_DATABASE=true \
-  ghcr.io/atmos-10x/electric-multidb:latest
+  ghcr.io/atmos-10x/powerstrip:latest
 ```
 
 ```
@@ -53,7 +55,7 @@ services:
     command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=40",
               "-c", "max_wal_senders=40", "-c", "max_connections=400"]
   electric:
-    image: ghcr.io/atmos-10x/electric-multidb:latest
+    image: ghcr.io/atmos-10x/powerstrip:latest
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/app?sslmode=disable
       ELECTRIC_MULTI_DATABASE: "true"
@@ -74,6 +76,8 @@ It's meant for development and previews, not production multi-tenancy. In produc
 ## License and credit
 
 Electric is by [ElectricSQL](https://electric-sql.com) and licensed under [Apache 2.0](packages/sync-service/LICENSE), and so is this fork. Files changed from upstream say so in their first line. Upstream's README follows below.
+
+powerstrip is an independent fork and isn't affiliated with or endorsed by ElectricSQL; "Electric" is their name.
 
 ---
 

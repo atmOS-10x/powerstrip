@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # End-to-end check of ELECTRIC_MULTI_DATABASE against a throwaway Postgres, with Docker:
-#   scripts/multi_database_test.sh [image]   default image: electric-multidb:dev
+#   scripts/multi_database_test.sh [image]   default image: powerstrip:dev
 set -euo pipefail
-image=${1:-electric-multidb:dev}
+image=${1:-powerstrip:dev}
 id=mdbtest$$
 net=$id pg=$id-pg el=$id-el
 port=$((40000 + RANDOM % 10000))

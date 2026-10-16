@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/electric-multidb
+  IMAGE: ghcr.io/${{ github.repository_owner }}/powerstrip
 
 jobs:
   test:
@@ -23,9 +23,9 @@ jobs:
         working-directory: packages/sync-service
         run: |
           docker buildx build --load --build-context electric-telemetry=../electric-telemetry \
-            --build-arg ELECTRIC_VERSION=$(jq -r .version package.json) -t electric-multidb:dev .
+            --build-arg ELECTRIC_VERSION=$(jq -r .version package.json) -t powerstrip:dev .
       - name: End-to-end test
-        run: packages/sync-service/scripts/multi_database_test.sh electric-multidb:dev
+        run: packages/sync-service/scripts/multi_database_test.sh powerstrip:dev
 
   build:
     needs: test
@@ -52,7 +52,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=Electric with a multi-database mode for git worktrees
+            org.opencontainers.image.description=powerstrip: Electric for every git worktree
             org.opencontainers.image.licenses=Apache-2.0
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
