@@ -37,6 +37,17 @@ expect "default stack serves DATABASE_URL's database" "$(shape "")" "from app"
 expect "/db/wt_a serves wt_a" "$(shape /db/wt_a)" "from wt_a"
 reject "/db/wt_a sees nothing of app" "$(shape /db/wt_a)" "from app"
 expect "/db/wt_b serves wt_b" "$(shape /db/wt_b)" "from wt_b"
+
+# Each database has its own schema: a migration in one changes nothing in the other.
+psql -d wt_b -c "ALTER TABLE items ADD COLUMN priority int DEFAULT 7"
+# Electric learns a table's new layout from the next change to it, then has clients refetch.
+psql -d wt_b -c "UPDATE items SET label = 'from wt_b' WHERE id = 1"
+sleep 2
+psql -d wt_b -c "CREATE TABLE notes (id int PRIMARY KEY, body text); INSERT INTO notes VALUES (1, 'only in wt_b')"
+expect "a new column shows in its database" "$(shape /db/wt_b)" '"priority":"7"'
+reject "and not in another" "$(shape /db/wt_a)" "priority"
+expect "a new table syncs in its database" "$(curl -sS "$base/db/wt_b/v1/shape?table=notes&offset=-1&secret=s3cret")" "only in wt_b"
+expect "and does not exist in another" "$(curl -sS "$base/db/wt_a/v1/shape?table=notes&offset=-1&secret=s3cret")" "does not exist"
 expect "/db/app is the default stack" "$(shape /db/app)" "from app"
 expect "the secret guards prefixed paths" "$(curl -sS -o /dev/null -w '%{http_code}' "$base/db/wt_a/v1/shape?table=items&offset=-1")" 401
 expect "the pattern limits databases" "$(curl -sS -o /dev/null -w '%{http_code}' "$base/db/postgres/v1/shape?table=items&offset=-1&secret=s3cret")" 404
