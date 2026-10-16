@@ -1,3 +1,4 @@
+# Modified in electric-multidb (github.com/atmOS-10x/electric-multidb): multi-database mode.
 import Config
 import Dotenvy
 
@@ -307,6 +308,15 @@ config :electric,
     env!("ELECTRIC_TCP_READ_TIMEOUT", &Electric.Config.parse_human_readable_time!/1, nil),
   feature_flags: env!("ELECTRIC_FEATURE_FLAGS", &Electric.Config.parse_feature_flags/1, nil),
   manual_table_publishing?: env!("ELECTRIC_MANUAL_TABLE_PUBLISHING", :boolean, nil),
+  multi_database?: env!("ELECTRIC_MULTI_DATABASE", :boolean, nil),
+  multi_database_pattern: env!("ELECTRIC_MULTI_DATABASE_PATTERN", &Regex.compile!/1, nil),
+  multi_database_pool_size: env!("ELECTRIC_MULTI_DATABASE_POOL_SIZE", :integer, nil),
+  multi_database_idle_timeout:
+    env!(
+      "ELECTRIC_MULTI_DATABASE_IDLE_TIMEOUT",
+      &Electric.Config.parse_human_readable_time!/1,
+      nil
+    ),
   publication_refresh_period:
     env!(
       "ELECTRIC_TWEAKS_PUBLICATION_REFRESH_PERIOD",

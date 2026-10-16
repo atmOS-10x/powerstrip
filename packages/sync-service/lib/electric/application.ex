@@ -1,3 +1,4 @@
+# Modified in electric-multidb (github.com/atmOS-10x/electric-multidb): multi-database mode.
 defmodule Electric.Application do
   use Application
   require Logger
@@ -60,6 +61,7 @@ defmodule Electric.Application do
       children_library(),
       application_telemetry(config),
       [{Electric.StackSupervisor, Keyword.put(config, :name, Electric.StackSupervisor)}],
+      multi_database_children(config),
       api_server_children(config),
       prometheus_endpoint(Electric.Config.get_env(:prometheus_port)),
       live_dashboard_endpoint(Electric.Config.get_env(:live_dashboard_port))
@@ -332,7 +334,7 @@ defmodule Electric.Application do
     [
       {Bandit,
        [
-         plug: {Electric.Plug.Router, router_opts},
+         plug: {router(opts), router_opts},
          port: get_env(opts, :service_port),
          http_1_options: shared_http_opts,
          http_2_options: shared_http_opts,
@@ -346,8 +348,32 @@ defmodule Electric.Application do
 
     [
       {Plug.Cowboy,
-       scheme: :http, plug: {Electric.Plug.Router, router_opts}, options: cowboy_options(opts)}
+       scheme: :http, plug: {router(opts), router_opts}, options: cowboy_options(opts)}
     ]
+  end
+
+  defp router(opts) do
+    if get_env(opts, :multi_database?),
+      do: Electric.Plug.MultiDatabaseRouter,
+      else: Electric.Plug.Router
+  end
+
+  defp multi_database_children(opts) do
+    if get_env(opts, :multi_database?) do
+      replication_connection_opts = get_env!(opts, :replication_connection_opts)
+
+      Electric.MultiDatabase.children(
+        replication_connection_opts: replication_connection_opts,
+        query_connection_opts:
+          get_env_lazy(opts, :query_connection_opts, fn -> replication_connection_opts end),
+        storage_dir: Path.join(get_env(opts, :storage_dir), "databases"),
+        pattern: get_env(opts, :multi_database_pattern),
+        idle_timeout: get_env(opts, :multi_database_idle_timeout),
+        pool_size: get_env(opts, :multi_database_pool_size)
+      )
+    else
+      []
+    end
   end
 
   defp api_server_children(opts) do

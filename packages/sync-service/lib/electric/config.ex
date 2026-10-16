@@ -1,3 +1,4 @@
+# Modified in electric-multidb (github.com/atmOS-10x/electric-multidb): multi-database mode.
 defmodule Electric.Config.Defaults do
   @moduledoc false
 
@@ -53,6 +54,11 @@ defmodule Electric.Config do
     # Scaling down on idle is disabled by default
     replication_idle_timeout: 0,
     manual_table_publishing?: false,
+    ## Electric.MultiDatabase
+    multi_database?: false,
+    multi_database_pattern: nil,
+    multi_database_idle_timeout: 30 * 60 * 1000,
+    multi_database_pool_size: 5,
     ## HTTP API
     # set enable_http_api: false to turn off the HTTP server totally
     enable_http_api: true,

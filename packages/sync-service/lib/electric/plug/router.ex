@@ -1,3 +1,4 @@
+# Modified in electric-multidb (github.com/atmOS-10x/electric-multidb): multi-database mode.
 defmodule Electric.Plug.Router do
   use Plug.Router, copy_opts_to_assign: :config
   use Electric.Telemetry
@@ -55,7 +56,8 @@ defmodule Electric.Plug.Router do
   # OPTIONS requests should not be authenticated
   def authenticate(%Plug.Conn{method: "OPTIONS"} = conn, _opts), do: conn
 
-  def authenticate(%Plug.Conn{request_path: "/v1/shape"} = conn, _opts) do
+  # path_info, not request_path: under Electric.Plug.MultiDatabaseRouter the request path has a prefix.
+  def authenticate(%Plug.Conn{path_info: ["v1", "shape"]} = conn, _opts) do
     api_secret = conn.assigns.config[:secret]
 
     if is_nil(api_secret) do
