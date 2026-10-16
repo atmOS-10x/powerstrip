@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/powerstrip
+  IMAGE: ghcr.io/atmos-10x/powerstrip # image names are lowercase; the org is atmOS-10x
 
 jobs:
   test:
