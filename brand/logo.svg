@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-label="Powerstrip logo">
-<style>@media (prefers-color-scheme: dark) { :root { color: #fff; } }</style>
-<g fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><circle cx="27" cy="53" r="17"/><circle cx="69" cy="53" r="17"/><path d="M44 53h8M10 53V23a9 9 0 0 1 9-9h21"/></g>
+  <rect width="96" height="96" rx="22" fill="#D5FF3F"/>
+  <g transform="translate(12 15) scale(.75)" stroke="#111719" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="27" cy="53" r="17"/>
+    <circle cx="69" cy="53" r="17"/>
+    <path d="M44 53h8M10 53V23a9 9 0 0 1 9-9h21"/>
+  </g>
 </svg>
